@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SVG Layers</title>
+  <style>
+    .layer-preview { margin: 10px; border: 1px solid #ccc; }
+    svg { width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <h1>Exported SVG Layers</h1>
+  {% for svg in svg_files %}
+    <div class="layer-preview">
+      <h3>{{ svg }}</h3>
+      <object type="image/svg+xml" data="{{ url_for('serve_svg', filename=svg) }}"></object>
+    </div>
+  {% endfor %}
+</body>
+</html>
