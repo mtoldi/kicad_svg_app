@@ -21,7 +21,7 @@
       {% set color = "#000000" %}
       {% if "F_Silkscreen" in svg or "Edge_Cuts" in svg %}
         {% set color = "#800080" %}
-      {% elif "User_Drawings" in svg %}
+      {% elif "User_Drawings" in svg or "F_Mask" in svg %}
         {% set color = "#cccccc" %}
       {% endif %}
       <div class="layer-item" data-file="{{ svg }}">
@@ -51,25 +51,43 @@
       animation: 150
     });
 
-    function applyColorRecursive(element, color, isEdgeCuts = false) {
+    function applyColorRecursive(element, color, layerName = "") {
       if (element.nodeType !== 1) return;
+    
+      const isEdgeCuts = layerName.includes("Edge_Cuts");
+      const isSilkscreen = layerName.includes("F_Silkscreen");
+    
+      const strokeWidth = isEdgeCuts ? "0.2" :
+                          isSilkscreen ? "0.05" :
+                          null;
     
       const style = element.getAttribute("style");
       if (style) {
-        const newStyle = style
-          .replace(/stroke:\s*[^;]+/, isEdgeCuts ? `stroke:${color}` : `stroke:none`)
-          .replace(/fill:\s*[^;]+/, isEdgeCuts ? `fill:${color}` : `fill:${color}`);
+        let newStyle = style
+          .replace(/stroke:\s*[^;]+/, isEdgeCuts || isSilkscreen ? `stroke:${color}` : `stroke:none`)
+          .replace(/fill:\s*[^;]+/, isEdgeCuts ? `fill:none` : `fill:${color}`);
+
+        if (strokeWidth !== null) {
+          if (newStyle.includes("stroke-width")) {
+            newStyle = newStyle.replace(/stroke-width:\s*[^;]+/, `stroke-width:${strokeWidth}`);
+          } else {
+            newStyle += `;stroke-width:${strokeWidth}`;
+          }
+        }
+      
         element.setAttribute("style", newStyle);
       } else {
-        element.setAttribute("stroke", isEdgeCuts ? color : "none");
+        element.setAttribute("stroke", isEdgeCuts || isSilkscreen ? color : "none");
         element.setAttribute("fill", isEdgeCuts ? "none" : color);
+        if (strokeWidth !== null) {
+          element.setAttribute("stroke-width", strokeWidth);
+        }
       }
     
       for (let child of element.children) {
-        applyColorRecursive(child, color, isEdgeCuts);
+        applyColorRecursive(child, color, layerName);
       }
     }
-
 
 
     async function updateStack() {
@@ -107,8 +125,8 @@
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         for (const child of innerSvg.children) {
           const cloned = child.cloneNode(true);
-          const isEdgeCuts = file.includes("Edge_Cuts");
-          applyColorRecursive(cloned, color, isEdgeCuts);
+          const layerName = file;
+          applyColorRecursive(cloned, color, layerName);
           g.appendChild(cloned);
         }
 

@@ -22,7 +22,7 @@ def export_svg_layers(pcb_path, output_dir):
 
     subprocess.run([
         "kicad-cli", "pcb", "export", "svg", pcb_path,
-        "--layers", "Edge.Cuts,F.Silkscreen,User.Drawings",
+        "--layers", "Edge.Cuts,F.Silkscreen,User.Drawings,F.Mask",
         "--mode-multi",
         "--output", output_dir,
         "--black-and-white",
