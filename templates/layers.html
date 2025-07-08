@@ -1,19 +1,148 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>SVG Layers</title>
+  <title>Layer Editor</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
   <style>
-    .layer-preview { margin: 10px; border: 1px solid #ccc; }
-    svg { width: 100%; height: auto; }
+    body { font-family: sans-serif; display: flex; gap: 2rem; }
+    #layer-controls { width: 300px; }
+    .layer-item { margin-bottom: 10px; padding: 5px; border: 1px solid #ccc; background: #f9f9f9; cursor: move; }
+    #svg-viewer { flex-grow: 1; border: 1px solid #000; height: 90vh; overflow: hidden; position: relative; }
+    #controls { margin-top: 1rem; }
   </style>
 </head>
 <body>
-  <h1>Exported SVG Layers</h1>
-  {% for svg in svg_files %}
-    <div class="layer-preview">
-      <h3>{{ svg }}</h3>
-      <object type="image/svg+xml" data="{{ url_for('serve_svg', filename=svg) }}"></object>
+
+  <div id="layer-controls">
+    <h2>Slojevi</h2>
+    <div id="layer-list">
+      {% for svg in svg_files %}
+      {% set color = "#000000" %}
+      {% if "F_Silkscreen" in svg or "Edge_Cuts" in svg %}
+        {% set color = "#800080" %}
+      {% elif "User_Drawings" in svg %}
+        {% set color = "#cccccc" %}
+      {% endif %}
+      <div class="layer-item" data-file="{{ svg }}">
+        <label>{{ svg }}</label><br>
+        Boja: <input type="color" value="{{ color }}" class="color-picker"><br>
+      </div>
+      {% endfor %}
     </div>
-  {% endfor %}
+    <div id="controls">
+      <button onclick="updateStack()">Prikaži složeni prikaz</button>
+      <button onclick="rotateView()">Rotiraj +90°</button>
+    </div>
+  </div>
+
+  <div id="svg-viewer">
+    <svg id="combined-svg" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <g id="main-content"></g>
+    </svg>
+  </div>
+
+  <script>
+    let currentRotation = 0;
+    let viewBoxCenter = { x: 0, y: 0 };
+    let panZoomInstance = null;
+
+    Sortable.create(document.getElementById('layer-list'), {
+      animation: 150
+    });
+
+    function applyColorRecursive(element, color, isEdgeCuts = false) {
+      if (element.nodeType !== 1) return;
+    
+      const style = element.getAttribute("style");
+      if (style) {
+        const newStyle = style
+          .replace(/stroke:\s*[^;]+/, isEdgeCuts ? `stroke:${color}` : `stroke:none`)
+          .replace(/fill:\s*[^;]+/, isEdgeCuts ? `fill:${color}` : `fill:${color}`);
+        element.setAttribute("style", newStyle);
+      } else {
+        element.setAttribute("stroke", isEdgeCuts ? color : "none");
+        element.setAttribute("fill", isEdgeCuts ? "none" : color);
+      }
+    
+      for (let child of element.children) {
+        applyColorRecursive(child, color, isEdgeCuts);
+      }
+    }
+
+
+
+    async function updateStack() {
+      const viewer = document.getElementById('combined-svg');
+      const group = document.getElementById('main-content');
+      group.innerHTML = '';
+      currentRotation = 0;
+      group.setAttribute("transform", "rotate(0)");
+
+      const items = document.querySelectorAll('.layer-item');
+      for (const item of items) {
+        const file = item.dataset.file;
+        const color = item.querySelector('.color-picker').value;
+
+        const res = await fetch(`/svg/${file}`);
+        const text = await res.text();
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "image/svg+xml");
+        const innerSvg = doc.querySelector('svg');
+
+        if (!innerSvg) continue;
+
+        // Set viewBox and compute center
+        if (viewer.getAttribute("viewBox") === null) {
+          const viewBox = innerSvg.getAttribute("viewBox");
+          if (viewBox) {
+            viewer.setAttribute("viewBox", viewBox);
+            const [x, y, width, height] = viewBox.split(" ").map(parseFloat);
+            viewBoxCenter.x = x + width / 2;
+            viewBoxCenter.y = y + height / 2;
+          }
+        }
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        for (const child of innerSvg.children) {
+          const cloned = child.cloneNode(true);
+          const isEdgeCuts = file.includes("Edge_Cuts");
+          applyColorRecursive(cloned, color, isEdgeCuts);
+          g.appendChild(cloned);
+        }
+
+        group.appendChild(g);
+      }
+
+      // Inicijaliziraj ili resetiraj pan/zoom
+      if (panZoomInstance) {
+        panZoomInstance.destroy();
+      }
+
+      panZoomInstance = svgPanZoom('#combined-svg', {
+        zoomEnabled: true,
+        controlIconsEnabled: true,
+        fit: true,
+        center: true
+      });
+
+      // Automatski približi (3x zoom nakon fit)
+      setTimeout(() => {
+        panZoomInstance.zoomBy(3.0); // zoom-in 3x
+      }, 0);
+    }
+
+    function rotateView() {
+      currentRotation = (currentRotation + 90) % 360;
+      const transform = `rotate(${currentRotation}, ${viewBoxCenter.x}, ${viewBoxCenter.y})`;
+      document.getElementById('main-content').setAttribute("transform", transform);
+      // Automatski približi (3x zoom nakon fit)
+      setTimeout(() => {
+        panZoomInstance.zoomBy(3.0); // zoom-in 3x
+      }, 0);
+    }
+  </script>
+
 </body>
 </html>

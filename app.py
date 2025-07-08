@@ -18,15 +18,19 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
 def export_svg_layers(pcb_path, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+
     subprocess.run([
         "kicad-cli", "pcb", "export", "svg", pcb_path,
-        "--layers", "F.Cu,F.Silkscreen,User.Drawings",
+        "--layers", "Edge.Cuts,F.Silkscreen,User.Drawings",
         "--mode-multi",
         "--output", output_dir,
         "--black-and-white",
         "--exclude-drawing-sheet",
-        "--page-size-mode",  "2"
+        "--page-size-mode", "2"
     ])
+
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
