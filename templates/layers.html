@@ -20,7 +20,7 @@
       {% for svg in svg_files %}
       {% set color = "#000000" %}
       {% if "F_Silkscreen" in svg or "Edge_Cuts" in svg %}
-        {% set color = "#800080" %}
+        {% set color = "#5B2379" %}
       {% elif "User_Drawings" in svg or "F_Mask" in svg %}
         {% set color = "#cccccc" %}
       {% endif %}
@@ -165,20 +165,20 @@
 
   function downloadSVG() {
     const svgElement = document.getElementById('combined-svg');
-    
+
     // Dodaj XML deklaraciju na početak
     const svgHeader = '<?xml version="1.0" standalone="no"?>\n' +
                       '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n' +
                       ' "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n';
-    
+
     // Serializiraj SVG kao tekst
     const serializer = new XMLSerializer();
     const svgText = svgHeader + serializer.serializeToString(svgElement);
-    
+
     // Pretvori u blob i pokreni download
     const blob = new Blob([svgText], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement("a");
     a.href = url;
     a.download = "combined_layers.svg";
