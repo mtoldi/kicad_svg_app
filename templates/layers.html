@@ -33,7 +33,10 @@
     <div id="controls">
       <button onclick="updateStack()">Prikaži složeni prikaz</button>
       <button onclick="rotateView()">Rotiraj +90°</button>
+      <label for="sku-input">SKU:</label>
+      <input type="text" id="sku-input" placeholder="npr. 333037" style="width: 100%; margin-bottom: 10px;"><br>
       <button onclick="downloadSVG()">Preuzmi SVG</button>
+
     </div>
   </div>
 
@@ -163,30 +166,31 @@
     }
 
 
-  function downloadSVG() {
-    const svgElement = document.getElementById('combined-svg');
+    function downloadSVG() {
+      const svgElement = document.getElementById('combined-svg');
+    
+      const sku = document.getElementById('sku-input').value.trim();
+      const filename = sku ? `${sku}.svg` : 'combined_layers.svg';
+    
+      const svgHeader = '<?xml version="1.0" standalone="no"?>\n' +
+                        '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n' +
+                        ' "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n';
+    
+      const serializer = new XMLSerializer();
+      const svgText = svgHeader + serializer.serializeToString(svgElement);
+    
+      const blob = new Blob([svgText], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+    
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
 
-    // Dodaj XML deklaraciju na početak
-    const svgHeader = '<?xml version="1.0" standalone="no"?>\n' +
-                      '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n' +
-                      ' "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n';
-
-    // Serializiraj SVG kao tekst
-    const serializer = new XMLSerializer();
-    const svgText = svgHeader + serializer.serializeToString(svgElement);
-
-    // Pretvori u blob i pokreni download
-    const blob = new Blob([svgText], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "combined_layers.svg";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
 
   </script>
 
