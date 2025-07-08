@@ -33,6 +33,7 @@
     <div id="controls">
       <button onclick="updateStack()">Prikaži složeni prikaz</button>
       <button onclick="rotateView()">Rotiraj +90°</button>
+      <button onclick="downloadSVG()">Preuzmi SVG</button>
     </div>
   </div>
 
@@ -160,6 +161,33 @@
         panZoomInstance.zoomBy(3.0); // zoom-in 3x
       }, 0);
     }
+
+
+  function downloadSVG() {
+    const svgElement = document.getElementById('combined-svg');
+    
+    // Dodaj XML deklaraciju na početak
+    const svgHeader = '<?xml version="1.0" standalone="no"?>\n' +
+                      '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n' +
+                      ' "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n';
+    
+    // Serializiraj SVG kao tekst
+    const serializer = new XMLSerializer();
+    const svgText = svgHeader + serializer.serializeToString(svgElement);
+    
+    // Pretvori u blob i pokreni download
+    const blob = new Blob([svgText], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "combined_layers.svg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   </script>
 
 </body>
